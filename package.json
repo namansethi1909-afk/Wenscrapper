@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "build": "rimraf dist && npx tsc",
-        "start": "node dist/index.js",
+        "start": "node dist/api/server.js",
         "start:api": "ts-node src/api/server.ts",
         "dev": "nodemon  src/index.ts",
         "dev:api": "nodemon --exec ts-node src/api/server.ts",

@@ -8,7 +8,10 @@ RUN npm install
 # Copy source code and config
 COPY . .
 
+# Build the application
+RUN npm run build
+
 EXPOSE 3000
 
-# Use start:api to run server.ts via ts-node
-CMD ["npm", "run", "start:api"]
+# Use npm start (which now runs node dist/api/server.js)
+CMD ["npm", "start"]
