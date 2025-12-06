@@ -197,7 +197,7 @@ const handleStreams = async (req: any, res: any) => {
       const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
 
       data.url = proxyUrl; // REPLACE URL WITH PROXY
-      data.headers = {}; // Clear headers as Proxy handles them
+      (data as any).headers = {}; // Clear headers as Proxy handles them
     } else if (data) {
       // If not MP4 (maybe iframe?), inject headers just in case
       (data as any).headers = fsiblogScraper.headers;

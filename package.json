@@ -3,7 +3,7 @@
     "module": "index.ts",
     "private": true,
     "scripts": {
-        "build": "rimraf dist && npx tsc",
+        "build": "npx rimraf dist && npx tsc",
         "start": "node dist/api/server.js",
         "start:api": "ts-node src/api/server.ts",
         "dev": "nodemon  src/index.ts",
@@ -39,6 +39,7 @@
         "jiti": "^2.5.1",
         "nodemon": "^3.1.10",
         "prettier": "^3.6.2",
+        "rimraf": "^6.1.2",
         "supertest": "^7.1.4",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.2",
@@ -62,7 +63,6 @@
         "morgan": "^1.10.1",
         "pm2": "^6.0.8",
         "redis": "^5.8.0",
-        "rimraf": "^6.0.1",
         "winston": "^3.17.0"
     }
 }
