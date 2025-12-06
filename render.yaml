@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: scrapper-hardgif
+    env: docker
+    plan: free

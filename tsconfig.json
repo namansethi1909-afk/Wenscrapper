@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // "module": "ESNext",
+
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "CommonJS", // Changed to CommonJS
+    "moduleResolution": "node", // Changed to node resolution,
+    "strict": true,
+    "baseUrl": "./src",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "lib": ["esnext", "dom"], // Include necessary library definitions
+    "types": ["node", "express"], // Include type definitions for Node.js and Express
+    "sourceMap": true, // Generate source maps for easier debugging
+    // "moduleResolution": "nodenext"
+    "paths": {
+      "*": ["*", "./*"]
+    }
+  },
+  "include": ["src/**/*.ts", "./.eslintrc.js"], // Include all .ts files in the src directory
+  "exclude": ["node_modules", "dist"] // Exclude node_modules and the output directory
+}

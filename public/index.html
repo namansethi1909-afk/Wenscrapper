@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FSIBlog Videos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #000; color: #fff; }
+        .header { background: #1a1a1a; padding: 15px; text-align: center; }
+        .search-bar { width: 80%; max-width: 500px; padding: 10px; border: none; border-radius: 25px; background: #333; color: #fff; margin: 10px auto; display: block; }
+        .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; padding: 20px; }
+        .video-card { background: #1a1a1a; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.3s; }
+        .video-card:hover { transform: scale(1.05); }
+        .video-thumbnail { width: 100%; height: 150px; object-fit: cover; }
+        .video-title { padding: 10px; font-size: 14px; text-align: center; }
+        .loading { text-align: center; padding: 50px; font-size: 18px; }
+        .error { text-align: center; padding: 50px; color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FSIBlog Videos</h1>
+        <input type="text" class="search-bar" placeholder="Search videos..." id="searchInput">
+    </div>
+    
+    <div class="videos-grid" id="videosGrid">
+        <div class="loading">Loading videos...</div>
+    </div>
+
+    <script>
+        async function loadVideos(query = '') {
+            const grid = document.getElementById('videosGrid');
+            grid.innerHTML = '<div class="loading">Loading videos...</div>';
+            
+            try {
+                const url = query ? `/api/search?q=${encodeURIComponent(query)}` : '/api';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data.videos) {
+                    grid.innerHTML = data.data.videos.map(video => `
+                        <div class="video-card" onclick="openVideo('${video.page}')">
+                            <img src="${video.poster}" alt="${video.title}" class="video-thumbnail" onerror="this.src='https://via.placeholder.com/200x150/333/fff?text=No+Image'">
+                            <div class="video-title">${video.title}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = '<div class="error">No videos found</div>';
+                }
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                grid.innerHTML = '<div class="error">Failed to load videos. Please try again.</div>';
+            }
+        }
+        
+        function openVideo(url) {
+            window.open(url, '_blank');
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value;
+            if (query.length > 2 || query.length === 0) {
+                loadVideos(query);
+            }
+        });
+        
+        // Load initial videos
+        loadVideos();
+    </script>
+</body>
+</html>
