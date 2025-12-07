@@ -11,6 +11,58 @@ puppeteer.use(StealthPlugin());
 
 function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)); }
 
+// Singleton Browser Manager
+class BrowserManager {
+    private static instance: any = null;
+    private static launchPromise: Promise<any> | null = null;
+
+    static async getBrowser() {
+        if (this.instance) {
+            if (this.instance.isConnected()) return this.instance;
+            this.instance = null;
+        }
+
+        if (!this.launchPromise) {
+            this.launchPromise = this.launch();
+        }
+
+        return this.launchPromise;
+    }
+
+    private static async launch() {
+        try {
+            const browser = await puppeteer.launch({
+                headless: true, // New headless mode 'new' is default in newer versions
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--js-flags="--max-old-space-size=256"' // Limit JS heap
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+                timeout: 60000
+            });
+
+            browser.on('disconnected', () => {
+                console.log('[Browser] Disconnected');
+                BrowserManager.instance = null;
+                BrowserManager.launchPromise = null;
+            });
+
+            this.instance = browser;
+            return browser;
+        } catch (error) {
+            console.error('[Browser] Launch error:', error);
+            this.launchPromise = null;
+            throw error;
+        }
+    }
+}
+
 export class MyDesi extends BaseSource {
     override baseUrl = "https://mydesi.click";
     override headers = {
@@ -22,31 +74,33 @@ export class MyDesi extends BaseSource {
 
     private async fetch(url: string, delayMs = 0): Promise<string> {
         if (delayMs > 0) await sleep(delayMs);
-        let browser;
+        let page;
         try {
-            browser = await puppeteer.launch({
-                headless: true, // New headless mode 'new' is default in newer versions, or use legacy 'true'
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--single-process',
-                    '--no-zygote'
-                ],
-                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
-            });
+            const browser = await BrowserManager.getBrowser();
+            page = await browser.newPage();
 
-            const page = await browser.newPage();
+            // Block heavy resources
+            await page.setRequestInterception(true);
+            page.on('request', (req: any) => {
+                const resourceType = req.resourceType();
+                if (['image', 'stylesheet', 'font', 'media', 'other'].includes(resourceType)) {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
 
             // Set headers
             await page.setExtraHTTPHeaders({
                 'Accept-Language': 'en-US,en;q=0.9'
             });
 
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            // Increase timeout slightly, waiting for DOM is usually enough
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-            // Wait a bit for potential Cloudflare challenge to clear
-            await sleep(5000);
+            // Wait shorter time for hydration/Cloudflare
+            // If blocked, 5s won't help much more than 2s usually
+            await sleep(2000);
 
             const content = await page.content();
             return content;
@@ -54,7 +108,7 @@ export class MyDesi extends BaseSource {
             console.error('[MyDesi] Fetch error:', e.message);
             throw e;
         } finally {
-            if (browser) await browser.close();
+            if (page) await page.close(); // Only close the page, keep browser open
         }
     }
 
@@ -62,8 +116,7 @@ export class MyDesi extends BaseSource {
         const $ = cheerio.load(html);
         const results: Search[] = [];
 
-        // Common video listing patterns - will be refined after testing
-        // Try multiple selectors
+        // Common video listing patterns
         const selectors = [
             '.video-card', '.video-item', '.thumb',
             'article', '.post', '.item',
@@ -103,7 +156,7 @@ export class MyDesi extends BaseSource {
                 $el.find('img').first().attr('data-src') ||
                 $el.find('img').first().attr('data-lazy-src') || '';
 
-            // Extract ID from href
+            // Extract ID
             const idMatch = href.match(/\/(?:video|watch|play|v)\/([^\/]+)/i) ||
                 href.match(/\/([^\/]+)\/?$/);
             const id = idMatch ? idMatch[1].replace(/\/$/, '') : '';
@@ -117,6 +170,11 @@ export class MyDesi extends BaseSource {
                     id,
                     title,
                     poster: poster || '',
+                    page: href.startsWith('http') ? href : `${this.baseUrl}${href}`,
+                    provider: this.baseUrl,
+                    keywords: [],
+                    origin: 'search',
+                    durationSeconds: duration,
                 } as Search);
             }
         });
@@ -155,7 +213,6 @@ export class MyDesi extends BaseSource {
     }
 
     override async getDetails(id: string): Promise<Details> {
-        // Build the video page URL
         const pageUrl = /^(https?:)?\//.test(id)
             ? id
             : `${this.baseUrl}/${id.replace(/^\/+|\/+$/g, "")}/`;
@@ -164,7 +221,6 @@ export class MyDesi extends BaseSource {
         const html = await this.fetch(pageUrl);
         const $ = cheerio.load(html);
 
-        // Extract video info
         const title = $('h1, .video-title, .title').first().text().trim() ||
             $('title').text().split('|')[0].trim() || id;
 
@@ -177,7 +233,6 @@ export class MyDesi extends BaseSource {
 
         const tags = $('a.tag, .tags a, a[rel="tag"]').map((_, a) => $(a).text().trim()).get();
 
-        // Get suggested videos
         const suggestedVideo = this.parseIndex(html).slice(0, 10);
 
         return {
@@ -195,7 +250,6 @@ export class MyDesi extends BaseSource {
     }
 
     override async getStreams(id: string): Promise<Stream> {
-        // Build the video page URL
         const pageUrl = /^(https?:)?\//.test(id)
             ? id
             : `${this.baseUrl}/${id.replace(/^\/+|\/+$/g, "")}/`;
@@ -206,11 +260,9 @@ export class MyDesi extends BaseSource {
 
         const title = $('h1, .video-title').first().text().trim() || id;
 
-        // Try multiple patterns to find video URL
         let videoUrl = '';
         const qualities: Array<{ lang: string, url: string }> = [];
 
-        // Pattern 1: video source tag
         $('video source').each((_, s) => {
             const src = $(s).attr('src');
             const quality = $(s).attr('label') || $(s).attr('title') || 'auto';
@@ -220,24 +272,15 @@ export class MyDesi extends BaseSource {
             }
         });
 
-        // Pattern 2: video src attribute
-        if (!videoUrl) {
-            videoUrl = $('video').attr('src') || '';
-        }
-
-        // Pattern 3: player embed/iframe
+        if (!videoUrl) videoUrl = $('video').attr('src') || '';
         if (!videoUrl) {
             const iframe = $('iframe[src*="video"], iframe[src*="embed"], iframe[src*="player"]').attr('src');
             if (iframe) videoUrl = iframe;
         }
-
-        // Pattern 4: JW Player or other player config
         if (!videoUrl) {
             const scriptMatch = html.match(/(?:file|source|video_url|videoUrl)['":\s]+['"](https?:\/\/[^'"]+(?:\.mp4|\.m3u8)[^'"]*)['"]/i);
             if (scriptMatch) videoUrl = scriptMatch[1];
         }
-
-        // Pattern 5: Look for .mp4 or .m3u8 URLs anywhere in script tags
         if (!videoUrl) {
             const mp4Match = html.match(/(https?:\/\/[^'"<>\s]+\.(?:mp4|m3u8)[^'"<>\s]*)/i);
             if (mp4Match) videoUrl = mp4Match[1];
