@@ -169,28 +169,38 @@ const handleStreams = async (req: any, res: any) => {
       if (details && details.title) title = details.title;
     } catch (e) { }
 
-    // 2. Try Fuzzy Search on HardGif (for HLS)
+    // 2. Try Multiple Search Strategies on HardGif (for HLS)
     let hlsStream = null;
     try {
-      // Strategy A: Search first 3 words (Broad)
-      const broadTitle = title.split(' ').slice(0, 3).join(' ');
-      console.log(`[Stream] Searching HardGif: "${broadTitle}"`);
+      // Multiple search queries to try
+      const searchQueries = [
+        title.split(' ').slice(0, 3).join(' '),  // First 3 words
+        title.split(' ').slice(0, 5).join(' '),  // First 5 words
+        title.replace(/desi|indian|hot|sexy|new/gi, '').trim().split(' ').slice(0, 3).join(' '), // Keywords without common words
+        idStr.replace(/-/g, ' ').split(' ').slice(0, 3).join(' '), // From slug
+      ].filter(q => q.length > 3); // Filter empty queries
 
-      const results = await hardgifScraper.getSearch(broadTitle, "1");
-
-      // Find best match in broader results
       let bestMatch = null;
       let bestScore = 0;
 
-      for (const r of results) {
-        const score = getSimilarity(title, r.title);
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = r;
-        }
+      for (const query of searchQueries) {
+        if (bestScore > 0.5) break; // Good enough match found
+
+        console.log(`[Stream] Trying HardGif search: "${query}"`);
+        try {
+          const results = await hardgifScraper.getSearch(query, "1");
+
+          for (const r of results) {
+            const score = getSimilarity(title, r.title);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = r;
+            }
+          }
+        } catch (e) { /* Continue to next query */ }
       }
 
-      if (bestMatch && bestScore > 0.3) { // Threshold
+      if (bestMatch && bestScore > 0.25) { // Lower threshold for more matches
         console.log(`[Stream] Fuzzy Match: ${bestMatch.title} (${bestScore.toFixed(2)})`);
         hlsStream = await hardgifScraper.getStreams(bestMatch.id);
       } else {
