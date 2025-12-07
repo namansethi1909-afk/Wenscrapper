@@ -1,4 +1,4 @@
-import * as cheerio from "cheerio";
+import cheerio from "cheerio";
 import axios from "axios";
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
