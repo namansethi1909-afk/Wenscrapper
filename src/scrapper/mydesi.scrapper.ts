@@ -1,6 +1,4 @@
 import * as cheerio from "cheerio";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cloudscraper = require('cloudscraper');
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
@@ -11,20 +9,27 @@ export class MyDesi extends BaseSource {
     override baseUrl = "https://mydesi.click";
     override headers = {
         "User-Agent": getAgentRandomRotation(),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": `${this.baseUrl}/`,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://mydesi.click/",
     };
 
     private async fetch(url: string, delayMs = 0): Promise<string> {
         if (delayMs > 0) await sleep(delayMs);
         try {
-            const html = await cloudscraper.get({
-                uri: url,
-                headers: this.headers,
-                timeout: 30000,
+            // Dynamic import for ESM package in CommonJS environment
+            const { gotScraping } = await import('got-scraping');
+            const response = await gotScraping({
+                url,
+                headerGeneratorOptions: {
+                    browsers: [{ name: 'chrome', minVersion: 110 }],
+                    devices: ['desktop'],
+                    locales: ['en-US'],
+                    operatingSystems: ['windows'],
+                },
+                timeout: { request: 30000 }
             });
-            return html;
+            return response.body;
         } catch (e: any) {
             console.error('[MyDesi] Fetch error:', e.message);
             throw e;
