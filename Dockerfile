@@ -3,16 +3,20 @@ FROM node:18-alpine
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# Install ALL dependencies (including dev) to ensure tsc and rimraf are available for the build step
-RUN npm ci --include=dev
 
-# Copy source code and config
+# Force install ALL dependencies (including devDependencies like typescript) 
+# checks if NODE_ENV is preventing it.
+RUN npm install --include=dev
+
 COPY . .
 
-# Build the application
+# Run the build script (tsc)
 RUN npm run build
+
+# (Optional) Remove dev dependencies to slim down the image
+# RUN npm prune --production
 
 EXPOSE 3000
 
-# Start the application
+# Start the compiled application
 CMD ["npm", "start"]
