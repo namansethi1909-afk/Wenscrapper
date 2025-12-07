@@ -126,7 +126,7 @@ app.get('/api/proxy', async (req, res) => {
 const handleTrending = async (req: any, res: any) => {
   try {
     const page = getParam(req, 'page', 'p') || '1';
-    const data = await withRetry(() => fsiblogScraper.getHome(page.toString()));
+    const data = await withRetry(() => hardgifScraper.getHome(page.toString()));
     res.json(formatResponse(data));
   } catch (error) { res.status(500).json([]); }
 };
@@ -136,7 +136,7 @@ const handleSearch = async (req: any, res: any) => {
     const q = getParam(req, 'q', 'query', 's', 'term', 'search');
     const page = getParam(req, 'page', 'p') || '1';
     if (!q) return res.status(400).json({ error: 'Missing search parameter' });
-    const data = await withRetry(() => fsiblogScraper.getSearch(q.toString(), page.toString()));
+    const data = await withRetry(() => hardgifScraper.getSearch(q.toString(), page.toString()));
     res.json(formatResponse(data));
   } catch (error) { res.status(500).json([]); }
 };
@@ -145,7 +145,7 @@ const handleDetails = async (req: any, res: any) => {
   try {
     const id = getParam(req, 'id', 'slug');
     if (!id) return res.status(400).json({ error: 'Missing id parameter' });
-    let data = await withRetry(() => fsiblogScraper.getDetails(id.toString()));
+    let data = await withRetry(() => hardgifScraper.getDetails(id.toString()));
     if (data && data.suggestedVideo && typeof (data.suggestedVideo as any).then === 'function') {
       data.suggestedVideo = await data.suggestedVideo;
     }
@@ -153,7 +153,7 @@ const handleDetails = async (req: any, res: any) => {
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
-// HYBRID + FUZZY + PROXY STREAM RESOLVER
+// SIMPLE HARDGIF STREAM HANDLER
 const handleStreams = async (req: any, res: any) => {
   try {
     let id = getParam(req, 'id', 'slug');
@@ -162,73 +162,14 @@ const handleStreams = async (req: any, res: any) => {
     console.log(`[Stream] ID: ${id}`);
     const idStr = id.toString();
 
-    // 1. Get Details first to get TITLE for Fuzzy Search
-    let title = idStr.replace(/-/g, ' '); // Fallback title
-    try {
-      const details = await fsiblogScraper.getDetails(idStr);
-      if (details && details.title) title = details.title;
-    } catch (e) { }
+    // Get HardGif stream directly
+    const data = await withRetry(() => hardgifScraper.getStreams(idStr));
 
-    // 2. Try Multiple Search Strategies on HardGif (for HLS)
-    let hlsStream = null;
-    try {
-      // Multiple search queries to try
-      const searchQueries = [
-        title.split(' ').slice(0, 3).join(' '),  // First 3 words
-        title.split(' ').slice(0, 5).join(' '),  // First 5 words
-        title.replace(/desi|indian|hot|sexy|new/gi, '').trim().split(' ').slice(0, 3).join(' '), // Keywords without common words
-        idStr.replace(/-/g, ' ').split(' ').slice(0, 3).join(' '), // From slug
-      ].filter(q => q.length > 3); // Filter empty queries
-
-      let bestMatch = null;
-      let bestScore = 0;
-
-      for (const query of searchQueries) {
-        if (bestScore > 0.5) break; // Good enough match found
-
-        console.log(`[Stream] Trying HardGif search: "${query}"`);
-        try {
-          const results = await hardgifScraper.getSearch(query, "1");
-
-          for (const r of results) {
-            const score = getSimilarity(title, r.title);
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatch = r;
-            }
-          }
-        } catch (e) { /* Continue to next query */ }
-      }
-
-      if (bestMatch && bestScore > 0.25) { // Lower threshold for more matches
-        console.log(`[Stream] Fuzzy Match: ${bestMatch.title} (${bestScore.toFixed(2)})`);
-        hlsStream = await hardgifScraper.getStreams(bestMatch.id);
-      } else {
-        console.log(`[Stream] No good match found (Max Score: ${bestScore.toFixed(2)})`);
-      }
-    } catch (e) { console.error('[Stream] Fuzzy failed', e); }
-
-    if (hlsStream && hlsStream.url) {
-      return res.json([formatResponse(hlsStream)]);
+    if (data && data.url) {
+      return res.json([formatResponse(data)]);
     }
 
-    // 3. Fallback - Redirect to FsiBlog page
-    console.log('[Stream] Falling back to FsiBlog Page Redirect');
-
-    const pageUrl = `https://www.fsiblog.cc/${idStr.replace(/^\/+|\/+$/g, "")}/`;
-
-    return res.json([{
-      url: pageUrl,
-      quality: 'HD',
-      title: idStr.replace(/-/g, ' '),
-      type: 'video',
-      filename: 'video.mp4',
-      headers: {},
-      qualities: []
-    }]);
-
-
-
+    res.status(404).json({ error: 'Stream not found' });
   } catch (error) {
     console.error('Streams error:', error);
     res.status(500).json({ error: 'Failed to fetch streams' });
