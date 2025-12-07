@@ -201,27 +201,26 @@ const handleStreams = async (req: any, res: any) => {
       return res.json([formatResponse(hlsStream)]);
     }
 
-    // 3. Fallback to FsiBlog (MP4) -> PROXY
-    console.log('[Stream] Falling back to FsiBlog Proxy');
-    const data = await withRetry(() => fsiblogScraper.getStreams(idStr));
+    // 3. Fallback to FsiBlog (Page Redirect)
+    // The App/Client seems to prefer a redirect to the website for difficult videos
+    console.log('[Stream] Falling back to FsiBlog Page Redirect');
 
-    // If MP4, route through Proxy to force headers
-    if (data && data.url && data.url.includes('.mp4')) {
-      // Construct Proxy URL
-      const hostname = req.headers.host; // e.g. scrapper-hardgif.vercel.app
-      const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
+    // Construct the Page URL (slug based)
+    // ID is "slug" e.g "video-title" -> https://www.fsiblog.cc/video-title/
+    const pageUrl = `https://www.fsiblog.cc/${idStr.replace(/^\/+|\/+$/g, "")}/`;
 
-      data.url = proxyUrl; // REPLACE URL WITH PROXY
-      (data as any).headers = {}; // Clear headers as Proxy handles them
-    } else if (data) {
-      // If not MP4 (maybe iframe?), inject headers just in case
-      (data as any).headers = fsiblogScraper.headers;
-      (data as any).userAgent = fsiblogScraper.headers['User-Agent'];
-      (data as any).referer = fsiblogScraper.headers['Referer'];
-    }
+    // Return the Page URL. The App should detect this is not a direct video and open WebView.
+    // We explicitly set type to 'website' to hint the app if it supports it.
+    const fallbackData = {
+      url: pageUrl,
+      quality: 'HD',
+      filename: 'video.mp4',
+      type: 'website' // Hinting
+    };
 
-    res.json([formatResponse(data)]);
+    return res.json([formatResponse(fallbackData)]);
+
+
 
   } catch (error) {
     console.error('Streams error:', error);
