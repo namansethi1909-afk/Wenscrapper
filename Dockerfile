@@ -5,8 +5,8 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (including dev for build)
+RUN npm install --include=dev
 
 COPY . .
 
