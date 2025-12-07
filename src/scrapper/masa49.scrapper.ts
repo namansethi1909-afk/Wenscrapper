@@ -1,5 +1,4 @@
 import { load } from "cheerio";
-import cloudscraper from "cloudscraper";
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
@@ -15,11 +14,22 @@ export class Masa49 extends BaseSource {
 
     private async fetch(url: string): Promise<string> {
         try {
-            // cloudscraper(options) returns a Promise resolving to body
-            const body = await cloudscraper({ uri: url });
+            // Bypass TS compilation of dynamic import by using eval
+            // This ensures got-scraping (ESM) is loaded via native import() in Node.js
+            const { gotScraping } = await (eval('import("got-scraping")') as Promise<any>);
+
+            const { body } = await gotScraping({
+                url,
+                headerGeneratorOptions: {
+                    browsers: [{ name: 'chrome', minVersion: 110 }],
+                    devices: ['desktop'],
+                    locales: ['en-US'],
+                    operatingSystems: ['windows'],
+                }
+            });
             return body;
         } catch (e: any) {
-            console.error('[Masa49] Cloudscraper error:', e.message);
+            console.error('[Masa49] got-scraping error:', e.message);
             throw e;
         }
     }
