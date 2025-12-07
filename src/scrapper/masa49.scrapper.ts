@@ -1,4 +1,4 @@
-import cheerio from "cheerio";
+import { load } from "cheerio";
 import axios from "axios";
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
@@ -30,7 +30,7 @@ export class Masa49 extends BaseSource {
     }
 
     private parseIndex(html: string): Search[] {
-        const $ = cheerio.load(html);
+        const $ = load(html);
         const results: Search[] = [];
 
         console.log(`[Masa49] ParseIndex: HTML length ${html.length}`);
@@ -44,7 +44,7 @@ export class Masa49 extends BaseSource {
             throw new Error(msg);
         }
 
-        boxes.each((_, el) => {
+        boxes.each((_: any, el: any) => {
             const $el = $(el);
             const anchor = $el.find('a').first();
             const href = anchor.attr('href') || '';
@@ -108,7 +108,7 @@ export class Masa49 extends BaseSource {
 
         console.log(`[Masa49] Details: ${url}`);
         const html = await this.fetch(url);
-        const $ = cheerio.load(html);
+        const $ = load(html);
 
         const title = $('h1').first().text().trim() || cleanId;
         const description = $('.entry-content p').first().text().trim() || '';
@@ -116,7 +116,7 @@ export class Masa49 extends BaseSource {
 
         // Tags
         const tags: string[] = [];
-        $('a[rel="tag"]').each((_, el) => {
+        $('a[rel="tag"]').each((_: any, el: any) => {
             tags.push($(el).text().trim());
         });
 
@@ -142,13 +142,13 @@ export class Masa49 extends BaseSource {
 
         console.log(`[Masa49] Streams: ${url}`);
         const html = await this.fetch(url);
-        const $ = cheerio.load(html);
+        const $ = load(html);
 
         let videoUrl = '';
         const qualities: Array<{ lang: string, url: string }> = [];
 
         // 1. Direct video tag
-        $('video source').each((_, el) => {
+        $('video source').each((_: any, el: any) => {
             const src = $(el).attr('src');
             if (src && !videoUrl) videoUrl = src;
             if (src) qualities.push({ lang: 'auto', url: src });
