@@ -72,7 +72,14 @@ export class Masa49 extends BaseSource {
             }
         });
 
-        console.log(`[Masa49] Parsed ${results.length} items`);
+        console.log(`[Masa49] Parsed ${results.length} items from ${boxes.length} boxes`);
+
+        if (results.length === 0) {
+            const msg = `[Masa49] Parsed 0 results (Boxes: ${boxes.length}). Partial HTML: ${html.substring(0, 100)}`;
+            console.log(msg);
+            throw new Error(msg);
+        }
+
         return results;
     }
 
