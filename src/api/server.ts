@@ -202,20 +202,19 @@ const handleStreams = async (req: any, res: any) => {
       return res.json([formatResponse(hlsStream)]);
     }
 
-    // 3. Fallback to FsiBlog (MP4) - Direct URL with Headers
-    // Return the direct URL with headers that the app should apply
-    console.log('[Stream] Falling back to FsiBlog Direct with Headers');
+    // 3. Fallback to FsiBlog (MP4) -> PROXY
+    // Proxy handles headers and supports Range requests for seeking
+    console.log('[Stream] Falling back to FsiBlog Proxy');
     const data = await withRetry(() => fsiblogScraper.getStreams(idStr));
 
+    // Route through Proxy to handle headers
     if (data && data.url) {
-      // Include headers that the app needs to send when fetching the video
-      (data as any).headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Referer': 'https://www.fsiblog.cc/'
-      };
-      // Also add flattened properties for apps that check these
-      (data as any).userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-      (data as any).referer = 'https://www.fsiblog.cc/';
+      const hostname = req.headers.host;
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
+
+      data.url = proxyUrl;
+      (data as any).headers = {};
     }
 
     return res.json([formatResponse(data)]);
