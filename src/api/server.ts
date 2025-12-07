@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-import { FsiBlog } from '../scrapper/fsiblog.scrapper';
-import { HardGif } from '../scrapper/hardgif.scrapper';
+import { MyDesi } from '../scrapper/mydesi.scrapper';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,8 +10,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const fsiblogScraper = new FsiBlog();
-const hardgifScraper = new HardGif();
+const mydesiScraper = new MyDesi();
+
 
 const getParam = (req: any, ...keys: string[]) => {
   for (const key of keys) {
@@ -126,7 +125,7 @@ app.get('/api/proxy', async (req, res) => {
 const handleTrending = async (req: any, res: any) => {
   try {
     const page = getParam(req, 'page', 'p') || '1';
-    const data = await withRetry(() => hardgifScraper.getHome(page.toString()));
+    const data = await withRetry(() => mydesiScraper.getHome(page.toString()));
     res.json(formatResponse(data));
   } catch (error) { res.status(500).json([]); }
 };
@@ -136,7 +135,7 @@ const handleSearch = async (req: any, res: any) => {
     const q = getParam(req, 'q', 'query', 's', 'term', 'search');
     const page = getParam(req, 'page', 'p') || '1';
     if (!q) return res.status(400).json({ error: 'Missing search parameter' });
-    const data = await withRetry(() => hardgifScraper.getSearch(q.toString(), page.toString()));
+    const data = await withRetry(() => mydesiScraper.getSearch(q.toString(), page.toString()));
     res.json(formatResponse(data));
   } catch (error) { res.status(500).json([]); }
 };
@@ -145,7 +144,7 @@ const handleDetails = async (req: any, res: any) => {
   try {
     const id = getParam(req, 'id', 'slug');
     if (!id) return res.status(400).json({ error: 'Missing id parameter' });
-    let data = await withRetry(() => hardgifScraper.getDetails(id.toString()));
+    let data = await withRetry(() => mydesiScraper.getDetails(id.toString()));
     if (data && data.suggestedVideo && typeof (data.suggestedVideo as any).then === 'function') {
       data.suggestedVideo = await data.suggestedVideo;
     }
@@ -163,7 +162,7 @@ const handleStreams = async (req: any, res: any) => {
     const idStr = id.toString();
 
     // Get HardGif stream directly
-    const data = await withRetry(() => hardgifScraper.getStreams(idStr));
+    const data = await withRetry(() => mydesiScraper.getStreams(idStr));
 
     if (data && data.url) {
       return res.json([formatResponse(data)]);
@@ -196,29 +195,24 @@ app.all('/fsiblog/streams', handleStreams);
 app.all('/hardgif/streams', handleStreams);
 
 // Legacy Root
-app.get('/api/scrape', async (req, res) => { /* ... */
+app.get('/api/scrape', async (req, res) => {
   try {
-    const { source = 'fsiblog', query = '' } = req.query;
-    let data;
-    if (source === 'fsiblog') {
-      data = await withRetry(() => fsiblogScraper.getSearch(query as string));
-    } else {
-      data = await hardgifScraper.getSearch(query as string);
-    }
-    res.json({ success: true, data: formatResponse(data), source, timestamp: new Date().toISOString() });
+    const { query = '' } = req.query;
+    const data = await withRetry(() => mydesiScraper.getSearch(query as string));
+    res.json({ success: true, data: formatResponse(data), source: 'mydesi', timestamp: new Date().toISOString() });
   } catch (error) { res.status(500).json({ success: false, error: 'Failed' }); }
 });
 
 app.get('/', async (req, res) => {
   try {
-    const data = await withRetry(() => fsiblogScraper.getHome());
-    const videosHTML = data.map((video: any) => `
+    const data = await withRetry(() => mydesiScraper.getHome());
+    const videosHTML = (data as any[]).map((video: any) => `
       <div class="video-card" onclick="window.open('${video.page || '#'}', '_blank')">
         <img src="${video.poster}" alt="${video.title}" class="video-thumbnail" onerror="this.src='https://via.placeholder.com/324x200/1a1a2e/ffffff?text=No+Image'">
         <div class="video-title">${video.title}</div>
       </div>
     `).join('');
-    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Proxy Active)</h1>${videosHTML}</body></html>`);
+    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (MyDesi)</h1>${videosHTML}</body></html>`);
   } catch (error) { res.status(500).send('<h1>Status: Upstream Error</h1>'); }
 });
 
