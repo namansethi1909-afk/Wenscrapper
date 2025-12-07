@@ -1,7 +1,13 @@
 import * as cheerio from "cheerio";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const puppeteer = require('puppeteer-extra');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
+
+puppeteer.use(StealthPlugin());
 
 function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)); }
 
@@ -16,23 +22,39 @@ export class MyDesi extends BaseSource {
 
     private async fetch(url: string, delayMs = 0): Promise<string> {
         if (delayMs > 0) await sleep(delayMs);
+        let browser;
         try {
-            // Dynamic import for ESM package in CommonJS environment
-            const { gotScraping } = await import('got-scraping');
-            const response = await gotScraping({
-                url,
-                headerGeneratorOptions: {
-                    browsers: [{ name: 'chrome', minVersion: 110 }],
-                    devices: ['desktop'],
-                    locales: ['en-US'],
-                    operatingSystems: ['windows'],
-                },
-                timeout: { request: 30000 }
+            browser = await puppeteer.launch({
+                headless: true, // New headless mode 'new' is default in newer versions, or use legacy 'true'
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--single-process',
+                    '--no-zygote'
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
             });
-            return response.body;
+
+            const page = await browser.newPage();
+
+            // Set headers
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'en-US,en;q=0.9'
+            });
+
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+            // Wait a bit for potential Cloudflare challenge to clear
+            await sleep(5000);
+
+            const content = await page.content();
+            return content;
         } catch (e: any) {
             console.error('[MyDesi] Fetch error:', e.message);
             throw e;
+        } finally {
+            if (browser) await browser.close();
         }
     }
 

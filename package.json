@@ -64,6 +64,9 @@
         "impit": "^0.5.4",
         "morgan": "^1.10.1",
         "pm2": "^6.0.8",
+        "puppeteer": "^24.32.0",
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2",
         "redis": "^5.8.0",
         "winston": "^3.17.0"
     }
