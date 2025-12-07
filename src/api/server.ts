@@ -49,7 +49,8 @@ function getSimilarity(s1: string, s2: string) {
 }
 
 const enrichVideo = (item: any) => {
-  const enriched = { ...item, type: 'video' };
+  // Respect existing type if set (e.g. 'webview'), default to 'video'
+  const enriched = { ...item, type: item.type || 'video' };
   // Add Proxy URL property if needed by App (some apps check specific keys)
   if (item.url && item.url.includes('.mp4')) {
     // We will replace the URL in final formatting if we choose Proxy
@@ -209,13 +210,12 @@ const handleStreams = async (req: any, res: any) => {
     // ID is "slug" e.g "video-title" -> https://www.fsiblog.cc/video-title/
     const pageUrl = `https://www.fsiblog.cc/${idStr.replace(/^\/+|\/+$/g, "")}/`;
 
-    // Return the Page URL. The App should detect this is not a direct video and open WebView.
-    // We explicitly set type to 'website' to hint the app if it supports it.
+    // Return the Page URL optimization. The App should detect this and open WebView.
     const fallbackData = {
       url: pageUrl,
       quality: 'HD',
       filename: 'video.mp4',
-      type: 'website' // Hinting
+      type: 'webview' // Standard for redirecting
     };
 
     return res.json([formatResponse(fallbackData)]);
