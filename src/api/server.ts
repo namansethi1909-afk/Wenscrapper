@@ -202,25 +202,20 @@ const handleStreams = async (req: any, res: any) => {
       return res.json([formatResponse(hlsStream)]);
     }
 
-    // 3. Fallback to FsiBlog (MP4) -> PROXY
-    // Proxy handles headers and supports Range requests for seeking
-    console.log('[Stream] Falling back to FsiBlog Proxy');
+    // 3. Fallback to FsiBlog (MP4) - Direct URL with Headers
+    // Return the direct URL with headers that the app should apply
+    console.log('[Stream] Falling back to FsiBlog Direct with Headers');
     const data = await withRetry(() => fsiblogScraper.getStreams(idStr));
 
-    // If MP4, route through Proxy to force headers
-    if (data && data.url && data.url.includes('.mp4')) {
-      // Construct Proxy URL
-      const hostname = req.headers.host;
-      const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
-
-      data.url = proxyUrl; // REPLACE URL WITH PROXY
-      (data as any).headers = {}; // Clear headers as Proxy handles them
-    } else if (data) {
-      // If not MP4 (maybe iframe?), inject headers just in case
-      (data as any).headers = fsiblogScraper.headers;
-      (data as any).userAgent = fsiblogScraper.headers['User-Agent'];
-      (data as any).referer = fsiblogScraper.headers['Referer'];
+    if (data && data.url) {
+      // Include headers that the app needs to send when fetching the video
+      (data as any).headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Referer': 'https://www.fsiblog.cc/'
+      };
+      // Also add flattened properties for apps that check these
+      (data as any).userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+      (data as any).referer = 'https://www.fsiblog.cc/';
     }
 
     return res.json([formatResponse(data)]);
