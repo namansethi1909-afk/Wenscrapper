@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-// dynamic import in fetch
+import axios from "axios";
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
@@ -15,20 +15,14 @@ export class Masa49 extends BaseSource {
 
     private async fetch(url: string): Promise<string> {
         try {
-            // dynamic import for ESM compatibility
-            const { gotScraping } = await import('got-scraping');
-
-            // Using got-scraping with explicit options to mimic a real browser
-            const { body } = await gotScraping({
-                url,
-                headerGeneratorOptions: {
-                    browsers: [{ name: 'chrome', minVersion: 110 }],
-                    devices: ['desktop'],
-                    locales: ['en-US'],
-                    operatingSystems: ['windows'],
+            const { data } = await axios.get(url, {
+                headers: {
+                    ...this.headers,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
                 }
             });
-            return body;
+            // Axios returns string automatically for text/html, or object for json
+            return typeof data === 'string' ? data : JSON.stringify(data);
         } catch (e: any) {
             console.error('[Masa49] Fetch error:', e.message);
             throw e;
@@ -44,11 +38,9 @@ export class Masa49 extends BaseSource {
         console.log(`[Masa49] Found ${boxes.length} .box elements`);
 
         if (boxes.length === 0) {
-            // Debug: Log partial HTML to see what we actually got (maybe Cloudflare or mobile view?)
             const partial = html.substring(0, 500).replace(/\n/g, ' ');
             const msg = `[Masa49] No items found. HTML len: ${html.length}. Posts: ${$('.post').length}. Partial: ${partial}`;
             console.log(msg);
-            // Throw error so it bubbles up to API response
             throw new Error(msg);
         }
 
