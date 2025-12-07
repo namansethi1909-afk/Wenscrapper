@@ -202,23 +202,28 @@ const handleStreams = async (req: any, res: any) => {
       return res.json([formatResponse(hlsStream)]);
     }
 
-    // 3. Fallback to FsiBlog (Page Redirect)
-    // The App/Client seems to prefer a redirect to the website for difficult videos
-    console.log('[Stream] Falling back to FsiBlog Page Redirect');
+    // 3. Fallback to FsiBlog (MP4) -> PROXY
+    // Proxy handles headers and supports Range requests for seeking
+    console.log('[Stream] Falling back to FsiBlog Proxy');
+    const data = await withRetry(() => fsiblogScraper.getStreams(idStr));
 
-    // Construct the Page URL (slug based)
-    // ID is "slug" e.g "video-title" -> https://www.fsiblog.cc/video-title/
-    const pageUrl = `https://www.fsiblog.cc/${idStr.replace(/^\/+|\/+$/g, "")}/`;
+    // If MP4, route through Proxy to force headers
+    if (data && data.url && data.url.includes('.mp4')) {
+      // Construct Proxy URL
+      const hostname = req.headers.host;
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
 
-    // Return the Page URL optimization. The App should detect this and open WebView.
-    const fallbackData = {
-      url: pageUrl,
-      quality: 'HD',
-      filename: 'video.mp4',
-      type: 'webview' // Standard for redirecting
-    };
+      data.url = proxyUrl; // REPLACE URL WITH PROXY
+      (data as any).headers = {}; // Clear headers as Proxy handles them
+    } else if (data) {
+      // If not MP4 (maybe iframe?), inject headers just in case
+      (data as any).headers = fsiblogScraper.headers;
+      (data as any).userAgent = fsiblogScraper.headers['User-Agent'];
+      (data as any).referer = fsiblogScraper.headers['Referer'];
+    }
 
-    return res.json([formatResponse(fallbackData)]);
+    return res.json([formatResponse(data)]);
 
 
 
