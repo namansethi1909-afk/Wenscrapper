@@ -127,7 +127,7 @@ const handleTrending = async (req: any, res: any) => {
     const page = getParam(req, 'page', 'p') || '1';
     const data = await withRetry(() => mydesiScraper.getHome(page.toString()));
     res.json(formatResponse(data));
-  } catch (error) { res.status(500).json([]); }
+  } catch (error: any) { res.status(500).json({ error: error.message, stack: error.stack }); }
 };
 
 const handleSearch = async (req: any, res: any) => {
