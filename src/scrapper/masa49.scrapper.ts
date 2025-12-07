@@ -15,6 +15,7 @@ export class Masa49 extends BaseSource {
 
     private async fetch(url: string): Promise<string> {
         try {
+            // Using got-scraping with explicit options to mimic a real browser
             const { body } = await gotScraping({
                 url,
                 headerGeneratorOptions: {
@@ -35,7 +36,20 @@ export class Masa49 extends BaseSource {
         const $ = cheerio.load(html);
         const results: Search[] = [];
 
-        $('.box').each((_, el) => {
+        console.log(`[Masa49] ParseIndex: HTML length ${html.length}`);
+        const boxes = $('.box');
+        console.log(`[Masa49] Found ${boxes.length} .box elements`);
+
+        if (boxes.length === 0) {
+            // Debug: Log partial HTML to see what we actually got (maybe Cloudflare or mobile view?)
+            const partial = html.substring(0, 500).replace(/\n/g, ' ');
+            const msg = `[Masa49] No items found. HTML len: ${html.length}. Posts: ${$('.post').length}. Partial: ${partial}`;
+            console.log(msg);
+            // Throw error so it bubbles up to API response
+            throw new Error(msg);
+        }
+
+        boxes.each((_, el) => {
             const $el = $(el);
             const anchor = $el.find('a').first();
             const href = anchor.attr('href') || '';
@@ -58,6 +72,7 @@ export class Masa49 extends BaseSource {
             }
         });
 
+        console.log(`[Masa49] Parsed ${results.length} items`);
         return results;
     }
 
@@ -86,7 +101,6 @@ export class Masa49 extends BaseSource {
 
     override async getDetails(id: string): Promise<Details> {
         // ID is the slug, e.g. "video-name"
-        // Ensure ID doesn't contain full URL if passed incorrectly
         const cleanId = id.replace(this.baseUrl, '').replace(/^\/+|\/+$/g, '');
         const url = `${this.baseUrl}/${cleanId}/`;
 
@@ -149,11 +163,10 @@ export class Masa49 extends BaseSource {
             if (generic) videoUrl = generic[1];
         }
 
-        // 3. Iframe fallback (might need resolution)
+        // 3. Iframe fallback
         if (!videoUrl) {
             const iframe = $('iframe[src*="server"], iframe[src*="embed"]').attr('src');
             if (iframe) videoUrl = iframe;
-            // Note: external iframes might need another scrape, but for now returned as is
         }
 
         console.log(`[Masa49] Found stream: ${videoUrl}`);
