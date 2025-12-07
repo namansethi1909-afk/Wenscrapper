@@ -75,6 +75,9 @@ const formatResponse = (data: any) => {
 // ---------------------------
 // PROXY HANDLER
 // ---------------------------
+// ---------------------------
+// PROXY HANDLER (With Range Support)
+// ---------------------------
 app.get('/api/proxy', async (req, res) => {
   const { url, referer } = req.query;
   if (!url) return res.status(400).send('Missing url');
@@ -85,24 +88,33 @@ app.get('/api/proxy', async (req, res) => {
     };
     if (referer) headers['Referer'] = referer;
 
+    // Forward Range header if present (Critical for seeking/streaming)
+    if (req.headers.range) {
+      headers['Range'] = req.headers.range;
+    }
+
     // Stream the video
     const response = await axios({
       method: 'get',
       url: url as string,
       responseType: 'stream',
-      headers
+      headers,
+      validateStatus: () => true // Accept 206, 200, etc.
     });
 
-    // Set Content-Type
-    if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
+    // Forward important headers to client
+    const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+    headersToForward.forEach(h => {
+      if (response.headers[h]) res.setHeader(h, response.headers[h]);
+    });
+
+    res.status(response.status); // Forward status (e.g., 206)
     res.setHeader('Access-Control-Allow-Origin', '*');
 
     response.data.pipe(res);
   } catch (e: any) {
     console.error('Proxy error:', e.message);
-    res.status(500).send('Proxy Failed');
+    if (!res.headersSent) res.status(500).send('Proxy Failed');
   }
 });
 
@@ -110,7 +122,7 @@ app.get('/api/proxy', async (req, res) => {
 // MAIN HANDLERS
 // ---------------------------
 
-const handleTrending = async (req: any, res: any) => { /* ... Unchanged ... */
+const handleTrending = async (req: any, res: any) => {
   try {
     const page = getParam(req, 'page', 'p') || '1';
     const data = await withRetry(() => fsiblogScraper.getHome(page.toString()));
@@ -118,7 +130,7 @@ const handleTrending = async (req: any, res: any) => { /* ... Unchanged ... */
   } catch (error) { res.status(500).json([]); }
 };
 
-const handleSearch = async (req: any, res: any) => { /* ... Unchanged ... */
+const handleSearch = async (req: any, res: any) => {
   try {
     const q = getParam(req, 'q', 'query', 's', 'term', 'search');
     const page = getParam(req, 'page', 'p') || '1';
@@ -128,7 +140,7 @@ const handleSearch = async (req: any, res: any) => { /* ... Unchanged ... */
   } catch (error) { res.status(500).json([]); }
 };
 
-const handleDetails = async (req: any, res: any) => { /* ... Unchanged ... */
+const handleDetails = async (req: any, res: any) => {
   try {
     const id = getParam(req, 'id', 'slug');
     if (!id) return res.status(400).json({ error: 'Missing id parameter' });
@@ -159,11 +171,13 @@ const handleStreams = async (req: any, res: any) => {
     // 2. Try Fuzzy Search on HardGif (for HLS)
     let hlsStream = null;
     try {
-      // Search broad keywords (first 2 words of title)
-      const keywords = title.split(' ').slice(0, 2).join(' ');
-      const results = await hardgifScraper.getSearch(keywords, "1");
+      // Strategy A: Search first 3 words (Broad)
+      const broadTitle = title.split(' ').slice(0, 3).join(' ');
+      console.log(`[Stream] Searching HardGif: "${broadTitle}"`);
 
-      // Find best match
+      const results = await hardgifScraper.getSearch(broadTitle, "1");
+
+      // Find best match in broader results
       let bestMatch = null;
       let bestScore = 0;
 
@@ -178,6 +192,8 @@ const handleStreams = async (req: any, res: any) => {
       if (bestMatch && bestScore > 0.3) { // Threshold
         console.log(`[Stream] Fuzzy Match: ${bestMatch.title} (${bestScore.toFixed(2)})`);
         hlsStream = await hardgifScraper.getStreams(bestMatch.id);
+      } else {
+        console.log(`[Stream] No good match found (Max Score: ${bestScore.toFixed(2)})`);
       }
     } catch (e) { console.error('[Stream] Fuzzy failed', e); }
 
