@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import axios from "axios";
+import cloudscraper from "cloudscraper";
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
@@ -15,16 +15,11 @@ export class Masa49 extends BaseSource {
 
     private async fetch(url: string): Promise<string> {
         try {
-            const { data } = await axios.get(url, {
-                headers: {
-                    ...this.headers,
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
-                }
-            });
-            // Axios returns string automatically for text/html, or object for json
-            return typeof data === 'string' ? data : JSON.stringify(data);
+            // cloudscraper(options) returns a Promise resolving to body
+            const body = await cloudscraper({ uri: url });
+            return body;
         } catch (e: any) {
-            console.error('[Masa49] Fetch error:', e.message);
+            console.error('[Masa49] Cloudscraper error:', e.message);
             throw e;
         }
     }
