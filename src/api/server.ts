@@ -2,9 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import { Masa49 } from '../scrapper/masa49.scrapper';
-import { formatResponse } from "../utils/formatResponse";
-import { withRetry } from "../utils/fetchApi";
-import { redisClient } from "../db/redis";
 import path from "path";
 
 const app = express();
@@ -68,6 +65,17 @@ const enrichVideo = (item: any) => {
   }
 
   return enriched;
+};
+
+const formatResponse = (data: any) => {
+  // Simple pass through or wrap if needed. 
+  // Legacy api/scrape did: success: true, data: formatResponse(data)
+  // Legacy handleTrending did: res.json(formatResponse(data))
+  // We will assume data is the array, and we might enrich items.
+  if (Array.isArray(data)) {
+    return data.map(enrichVideo);
+  }
+  return data;
 };
 
 const handleTrending = async (req: any, res: any) => {
@@ -139,7 +147,7 @@ app.get("/", async (req: any, res: any) => {
         <a href="/details?id=${v.id}">Details</a>
       </div>
     `).join('');
-    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49)</h1>${videosHTML}</body></html>`);
+    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 v2-debug)</h1>${videosHTML}</body></html>`);
   } catch (e) { res.send(`Masa49 Scraper Online. Error fetching home: ${e}`); }
 });
 

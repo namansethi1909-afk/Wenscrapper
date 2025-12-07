@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { gotScraping } from 'got-scraping';
+// dynamic import in fetch
 import type { Stream, Search, Details, Home } from "../types";
 import { BaseSource } from "../types/baseSource";
 import { getAgentRandomRotation } from "../utils/userAgents";
@@ -15,6 +15,9 @@ export class Masa49 extends BaseSource {
 
     private async fetch(url: string): Promise<string> {
         try {
+            // dynamic import for ESM compatibility
+            const { gotScraping } = await import('got-scraping');
+
             // Using got-scraping with explicit options to mimic a real browser
             const { body } = await gotScraping({
                 url,
