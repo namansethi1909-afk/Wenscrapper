@@ -212,20 +212,20 @@ const handleStreams = async (req: any, res: any) => {
       return res.json([formatResponse(hlsStream)]);
     }
 
-    // 3. Fallback to FsiBlog (MP4) via Proxy
-    console.log('[Stream] Falling back to FsiBlog Proxy');
-    const data = await withRetry(() => fsiblogScraper.getStreams(idStr));
+    // 3. Fallback - Redirect to FsiBlog page
+    console.log('[Stream] Falling back to FsiBlog Page Redirect');
 
-    if (data && data.url) {
-      const hostname = req.headers.host;
-      const protocol = req.headers['x-forwarded-proto'] || 'https';
-      const proxyUrl = `${protocol}://${hostname}/api/proxy?url=${encodeURIComponent(data.url)}&referer=${encodeURIComponent('https://www.fsiblog.cc/')}`;
+    const pageUrl = `https://www.fsiblog.cc/${idStr.replace(/^\/+|\/+$/g, "")}/`;
 
-      data.url = proxyUrl;
-      (data as any).headers = {};
-    }
-
-    return res.json([formatResponse(data)]);
+    return res.json([{
+      url: pageUrl,
+      quality: 'HD',
+      title: idStr.replace(/-/g, ' '),
+      type: 'video',
+      filename: 'video.mp4',
+      headers: {},
+      qualities: []
+    }]);
 
 
 
