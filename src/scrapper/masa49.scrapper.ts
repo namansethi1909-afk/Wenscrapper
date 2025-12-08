@@ -55,7 +55,9 @@ export class Masa49 extends BaseSource {
             console.log(`[Masa49] Opening page: ${url}`);
             page = await browser.newPage();
 
-            // Aggressive Resource Blocking
+            // Aggressive Resource Blocking - DISABLED for debugging
+            // Site might need CSS/JS to pass bot check
+            /*
             await page.setRequestInterception(true);
             page.on('request', (req) => {
                 const type = req.resourceType();
@@ -65,6 +67,7 @@ export class Masa49 extends BaseSource {
                     req.continue();
                 }
             });
+            */
 
             await page.setUserAgent(this.headers['User-Agent']);
 
