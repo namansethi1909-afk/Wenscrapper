@@ -114,16 +114,10 @@ app.get('/api/scrape', async (req: any, res: any) => {
 app.get("/", async (req: any, res: any) => {
   try {
     const data = await withRetry(() => masa49Scraper.getHome());
-    const videosHTML = data.map((v: any) => `
-      <div style="margin: 20px; border: 1px solid #ccc; padding: 10px;">
-        <h3>${v.title}</h3>
-        <img src="${v.poster}" width="200" />
-        <p>ID: ${v.id}</p>
-        <a href="/details?id=${v.id}">Details</a>
-      </div>
-    `).join('');
-    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 FINAL FIX)</h1>${videosHTML}</body></html>`);
-  } catch (e) { res.send(`Masa49 Scraper Online. Error: ${e}`); }
+    res.json(formatResponse(data)); // Return JSON array directly
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch videos' });
+  }
 });
 
 
