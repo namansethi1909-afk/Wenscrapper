@@ -1,21 +1,25 @@
-FROM node:20-alpine
+FROM ghcr.io/puppeteer/puppeteer:23.10.1
 
+USER root
+
+# Set working directory
 WORKDIR /usr/src/app
 
+# Copy package files
 COPY package*.json ./
 
-# Force install ALL dependencies (including devDependencies like typescript) 
-# checks if NODE_ENV is preventing it.
-RUN npm install --include=dev
+# Install dependencies (including dev deps for tsc)
+# We need to ensure all deps are installed
+RUN npm install
 
+# Copy source
 COPY . .
 
-# Run the build script (tsc)
+# Build TypeScript
 RUN npm run build
 
-# (Optional) Remove dev dependencies to slim down the image
-# RUN npm prune --production
-
+# Expose port
 EXPOSE 3000
 
+# Start command
 CMD [ "npm", "start" ]
