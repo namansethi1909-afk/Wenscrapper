@@ -2,12 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 // import { Masa49 } from '../scrapper/masa49.scrapper';
-import { MyDesi } from '../scrapper/mydesi.scrapper';
-// withRetry is defined locally below
+// import { MyDesi } from '../scrapper/mydesi.scrapper';
+import { ThisVid } from '../scrapper/thisvid.scrapper';
+// withRetry is defined locally below 
 
-// Initialize Scraper (Switching to MyDesi for Puppeteer support)
+// Initialize Scraper (Switching to ThisVid for lightweight/reliable Cheerio support)
 // const masa49Scraper = new Masa49();
-const activeScraper = new MyDesi();
+// const activeScraper = new MyDesi();
+const activeScraper = new ThisVid();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
