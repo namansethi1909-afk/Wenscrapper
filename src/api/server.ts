@@ -49,12 +49,16 @@ function getSimilarity(s1: string, s2: string) {
 }
 
 const enrichVideo = (item: any) => {
-  // Respect existing type if set (e.g. 'webview'), default to 'video'
-  const enriched = { ...item, type: item.type || 'video' };
-  // Add Proxy URL property if needed by App (some apps check specific keys)
-  if (item.url && item.url.includes('.mp4')) {
-    // We will replace the URL in final formatting if we choose Proxy
-  }
+  // Skymute format: Add URL field for direct video playback
+  const enriched = {
+    ...item,
+    type: item.type || 'video',
+    // Skymute needs 'url' directly in the item for video playback
+    url: item.page || item.url || '',
+    thumbnail: item.poster || '',
+    // Keep both poster and thumbnail for compatibility
+  };
+
   if (item.headers) {
     if (item.headers['User-Agent']) enriched.userAgent = item.headers['User-Agent'];
     if (item.headers['Referer']) enriched.referer = item.headers['Referer'];
