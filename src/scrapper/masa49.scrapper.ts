@@ -56,7 +56,6 @@ export class Masa49 extends BaseSource {
             page = await browser.newPage();
 
             // Aggressive Resource Blocking - DISABLED for debugging
-            // Site might need CSS/JS to pass bot check
             /*
             await page.setRequestInterception(true);
             page.on('request', (req) => {
@@ -83,8 +82,6 @@ export class Masa49 extends BaseSource {
             return content;
         } catch (e: any) {
             console.error('[Masa49] Puppeteer error:', e.message);
-            // Close browser on fatal errors to prevent zombies? 
-            // Better to keep it open unless connection died.
             throw e;
         } finally {
             if (page) await page.close().catch(() => { });
@@ -100,21 +97,24 @@ export class Masa49 extends BaseSource {
 
         if (boxes.length === 0) {
             const partial = html.substring(0, 500).replace(/\n/g, ' ');
-            // Check if blocked by Cloudflare or similar
             const title = $('title').text();
             throw new Error(`[Masa49] 0 items found. Title: "${title}". Partial: ${partial}`);
         }
 
+        let debugInfo = "";
+
         boxes.each((i: any, el: any) => {
             const $el = $(el);
             const anchor = $el.find('a').first();
-            const href = anchor.attr('href') || '';
+            const href = anchor.attr('href') || codeFixUrl(anchor.attr('href'), this.baseUrl);
             const title = anchor.attr('title') || $el.find('.title').text().trim() || 'No Title';
             const poster = $el.find('img').attr('src') || '';
-            const id = href.replace(this.baseUrl, '').replace(/^\/+|\/+$/g, '');
+            const id = href ? href.replace(this.baseUrl, '').replace(/^\/+|\/+$/g, '') : '';
 
             if (i === 0) {
-                console.log(`[Masa49] First Item Debug: Href="${href}" ID="${id}" Title="${title}" HTML=${$el.html()?.substring(0, 100)}...`);
+                // Check if href is missing, maybe it's in a slightly different selector
+                debugInfo = `Href="${href}" ID="${id}" Title="${title}" HTML=${$el.html()?.substring(0, 50)}...`;
+                console.log(`[Masa49] First Item Debug: ${debugInfo}`);
             }
 
             if (id && href) {
@@ -131,10 +131,7 @@ export class Masa49 extends BaseSource {
         });
 
         if (results.length === 0) {
-            console.log(`[Masa49] Parsed 0 results despite finding ${boxes.length} boxes. Check First Item Debug.`);
-            // Allow it to return empty array so we can see the logs in the calling function response?
-            // Or throw to see in the 500 error. Throwing is better for "check-deploy-status" script which catches errors.
-            throw new Error(`[Masa49] Parsed 0 results (Boxes: ${boxes.length}). See logs.`);
+            throw new Error(`[Masa49] Parsed 0 results (Boxes: ${boxes.length}). First Item Debug: ${debugInfo}`);
         }
 
         return results;
@@ -170,6 +167,8 @@ export class Masa49 extends BaseSource {
         const tags: string[] = [];
         $('a[rel="tag"]').each((_: any, el: any) => tags.push($(el).text().trim()));
 
+        const suggestedVideo = this.parseIndex(html).slice(0, 10);
+
         return {
             id: cleanId,
             headers: this.headers,
@@ -179,7 +178,7 @@ export class Masa49 extends BaseSource {
             uploader: 'Masa49',
             upload_date: null,
             tags,
-            suggestedVideo: [],
+            suggestedVideo,
             seasons: []
         } as unknown as Details;
     }
@@ -219,4 +218,9 @@ export class Masa49 extends BaseSource {
             subtitles: []
         };
     }
+}
+
+function codeFixUrl(url: string | undefined, base: string) {
+    if (!url) return '';
+    return url;
 }
