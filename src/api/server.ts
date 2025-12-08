@@ -40,13 +40,11 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
 }
 
 // MATCH WORKING API FORMAT EXACTLY - ONLY 3 FIELDS
-// BUT ADD url field for Skymute video playback
 const toSkymuteFormat = (item: any) => {
   return {
     title: item.title || 'Untitled',
     id: item.id || '',
-    poster: item.poster || '',
-    url: item.page || '' // Add video page URL for Skymute playback
+    poster: item.poster || ''
   };
 };
 
