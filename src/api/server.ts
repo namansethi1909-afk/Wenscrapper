@@ -40,7 +40,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
 }
 
 // Skymute format converter
-const toSkymute Format = (item: any) => {
+const toSkymuteFormat = (item: any) => {
   // Skymute expects:
   // - id: unique identifier
   // - title: video title
@@ -63,7 +63,7 @@ const toSkymute Format = (item: any) => {
 
 const formatResponse = (data: any) => {
   if (Array.isArray(data)) {
-    return data.map(toSkymute Format);
+    return data.map(toSkymuteFormat);
   }
   return data;
 };
