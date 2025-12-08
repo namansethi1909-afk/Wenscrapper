@@ -137,6 +137,20 @@ export class Masa49 extends BaseSource {
             if (iframe) videoUrl = iframe;
         }
 
+        // Validate videoUrl
+        if (videoUrl) {
+            // If it's the same as the page URL, discard it
+            if (videoUrl === url || videoUrl.includes(cleanId)) {
+                console.log(`[Masa49] Discarding self-referencing video URL: ${videoUrl}`);
+                videoUrl = '';
+            }
+
+            // If it's a relative path, ignore it or fix it (masa49 usually uses absolute)
+            if (videoUrl.startsWith('/')) {
+                videoUrl = this.baseUrl + videoUrl;
+            }
+        }
+
         console.log(`[Masa49] Stream URL: ${videoUrl}`);
 
         return {
