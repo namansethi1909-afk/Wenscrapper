@@ -39,45 +39,31 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
   throw lastError;
 }
 
-// Helper: Similarity Score (Jaccard)
-function getSimilarity(s1: string, s2: string) {
-  const t1 = new Set(s1.toLowerCase().split(/[\s-]+/));
-  const t2 = new Set(s2.toLowerCase().split(/[\s-]+/));
-  const intersection = new Set([...t1].filter(x => t2.has(x)));
-  const union = new Set([...t1, ...t2]);
-  return intersection.size / union.size;
-}
+// Skymute format converter
+const toSkymute Format = (item: any) => {
+  // Skymute expects:
+  // - id: unique identifier
+  // - title: video title
+  // - image OR poster OR thumbnail: thumbnail image URL
+  // - url: link to video page/stream
+  // - description (optional)
 
-const enrichVideo = (item: any) => {
-  // Skymute format: Use 'webview' type since URL points to webpage, not direct video
-  const enriched = {
-    ...item,
-    type: 'webview', // Changed from 'video' - Skymute will open in browser
-    // Skymute needs 'url' directly in the item for webview playback
-    url: item.page || item.url || '',
+  return {
+    id: item.id || '',
+    title: item.title || 'Untitled',
+    image: item.poster || '',
     thumbnail: item.poster || '',
-    // Keep both poster and thumbnail for compatibility
+    poster: item.poster || '',
+    url: item.page || item.url || '',
+    description: item.title || '',
+    provider: 'masa49',
+    type: 'webview' // Open in browser since it's a webpage with embedded video
   };
-
-  if (item.headers) {
-    if (item.headers['User-Agent']) enriched.userAgent = item.headers['User-Agent'];
-    if (item.headers['Referer']) enriched.referer = item.headers['Referer'];
-  }
-
-  if (!enriched.userAgent) {
-    enriched.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
-  }
-
-  return enriched;
 };
 
 const formatResponse = (data: any) => {
-  // Simple pass through or wrap if needed. 
-  // Legacy api/scrape did: success: true, data: formatResponse(data)
-  // Legacy handleTrending did: res.json(formatResponse(data))
-  // We will assume data is the array, and we might enrich items.
   if (Array.isArray(data)) {
-    return data.map(enrichVideo);
+    return data.map(toSkymute Format);
   }
   return data;
 };
@@ -151,7 +137,7 @@ app.get("/", async (req: any, res: any) => {
         <a href="/details?id=${v.id}">Details</a>
       </div>
     `).join('');
-    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 v2-debug)</h1>${videosHTML}</body></html>`);
+    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 v3-skymute)</h1>${videosHTML}</body></html>`);
   } catch (e) { res.send(`Masa49 Scraper Online. Error fetching home: ${e}`); }
 });
 
