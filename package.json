@@ -2,6 +2,7 @@
     "name": "redtube",
     "module": "index.ts",
     "private": true,
+    "version": "2.0.0",
     "scripts": {
         "build": "npx rimraf dist && npx tsc",
         "start": "node dist/api/server.js",
