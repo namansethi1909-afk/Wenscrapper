@@ -40,8 +40,17 @@ class BrowserManager {
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
+                    '--single-process', // Important for low resource envs
                     '--disable-gpu',
-                    '--js-flags="--max-old-space-size=256"' // Limit JS heap
+                    '--disable-software-rasterizer',
+                    '--disable-extensions',
+                    '--mute-audio',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--headless=new',
+                    '--js-flags="--max-old-space-size=128"' // Strictly limit JS heap
                 ],
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                 timeout: 60000
