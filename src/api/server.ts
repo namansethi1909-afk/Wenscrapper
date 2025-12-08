@@ -39,18 +39,31 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
   throw lastError;
 }
 
-// MATCH WORKING API FORMAT EXACTLY - ONLY 3 FIELDS
+// MATCH WORKING API FORMAT + ADD VIDEO URLs
 const toSkymuteFormat = (item: any) => {
   return {
     title: item.title || 'Untitled',
     id: item.id || '',
-    poster: item.poster || ''
+    poster: item.poster || '',
+    url: item.videoUrl || '' // Direct MP4 stream URL
   };
 };
 
-const formatResponse = (data: any) => {
+const formatResponse = async (data: any) => {
   if (Array.isArray(data)) {
-    return data.map(toSkymuteFormat);
+    // Fetch video URLs in parallel for all items
+    const promises = data.map(async (item) => {
+      try {
+        const streams = await masa49Scraper.getStreams(item.id);
+        return { ...item, videoUrl: streams.url || '' };
+      } catch (e) {
+        console.error(`[Server] Failed to get stream for ${item.id}:`, e);
+        return { ...item, videoUrl: '' };
+      }
+    });
+
+    const enrichedData = await Promise.all(promises);
+    return enrichedData.map(toSkymuteFormat);
   }
   return data;
 };
@@ -59,7 +72,8 @@ const handleTrending = async (req: any, res: any) => {
   try {
     const page = getParam(req, 'page', 'p') || '1';
     const data = await withRetry(() => masa49Scraper.getHome(page.toString()));
-    res.json(formatResponse(data));
+    const formatted = await formatResponse(data); // Now async
+    res.json(formatted);
   } catch (error: any) { res.status(500).json({ error: error.message, stack: error.stack }); }
 };
 
@@ -70,7 +84,8 @@ const handleSearch = async (req: any, res: any) => {
     if (!q) return res.status(400).json({ error: 'Query parameter is required' });
 
     const data = await withRetry(() => masa49Scraper.getSearch(q.toString(), page.toString()));
-    res.json(formatResponse(data));
+    const formatted = await formatResponse(data); // Now async
+    res.json(formatted);
   } catch (error) { res.status(500).json([]); }
 };
 
