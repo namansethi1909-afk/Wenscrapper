@@ -41,21 +41,17 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
 
 // Skymute format converter
 const toSkymuteFormat = (item: any) => {
-  // Skymute expects:
-  // - id: unique identifier
-  // - title: video title
-  // - image OR poster OR thumbnail: thumbnail image URL
-  // - url: link to video page/stream
-  // - description (optional)
+  // Skymute expects all these fields to be present
+  const posterUrl = item.poster || '';
 
   return {
     id: item.id || '',
     title: item.title || 'Untitled',
-    image: item.poster || '',
-    thumbnail: item.poster || '',
-    poster: item.poster || '',
+    image: posterUrl, // Skymute uses 'image' field
+    thumbnail: posterUrl,
+    poster: posterUrl,
     url: item.page || item.url || '',
-    description: item.title || '',
+    description: item.title || 'Video', // Use title as description
     provider: 'masa49',
     type: 'webview' // Open in browser since it's a webpage with embedded video
   };
