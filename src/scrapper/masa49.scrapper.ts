@@ -105,13 +105,17 @@ export class Masa49 extends BaseSource {
             throw new Error(`[Masa49] 0 items found. Title: "${title}". Partial: ${partial}`);
         }
 
-        boxes.each((_: any, el: any) => {
+        boxes.each((i: any, el: any) => {
             const $el = $(el);
             const anchor = $el.find('a').first();
             const href = anchor.attr('href') || '';
             const title = anchor.attr('title') || $el.find('.title').text().trim() || 'No Title';
             const poster = $el.find('img').attr('src') || '';
             const id = href.replace(this.baseUrl, '').replace(/^\/+|\/+$/g, '');
+
+            if (i === 0) {
+                console.log(`[Masa49] First Item Debug: Href="${href}" ID="${id}" Title="${title}" HTML=${$el.html()?.substring(0, 100)}...`);
+            }
 
             if (id && href) {
                 results.push({
@@ -125,6 +129,13 @@ export class Masa49 extends BaseSource {
                 } as Search);
             }
         });
+
+        if (results.length === 0) {
+            console.log(`[Masa49] Parsed 0 results despite finding ${boxes.length} boxes. Check First Item Debug.`);
+            // Allow it to return empty array so we can see the logs in the calling function response?
+            // Or throw to see in the 500 error. Throwing is better for "check-deploy-status" script which catches errors.
+            throw new Error(`[Masa49] Parsed 0 results (Boxes: ${boxes.length}). See logs.`);
+        }
 
         return results;
     }
