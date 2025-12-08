@@ -55,18 +55,16 @@ export class Masa49 extends BaseSource {
             console.log(`[Masa49] Opening page: ${url}`);
             page = await browser.newPage();
 
-            // Aggressive Resource Blocking - DISABLED for debugging
-            /*
+            // Aggressive Resource Blocking - ENABLED to prevent OOM
             await page.setRequestInterception(true);
             page.on('request', (req) => {
                 const type = req.resourceType();
-                if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+                if (['image', 'stylesheet', 'font', 'media'].includes(type) || req.url().includes('google') || req.url().includes('facebook')) {
                     req.abort();
                 } else {
                     req.continue();
                 }
             });
-            */
 
             await page.setUserAgent(this.headers['User-Agent']);
 
