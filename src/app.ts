@@ -15,6 +15,7 @@ import { ApiResponse } from "./handler/response.handler";
 import { CONFIG } from "./config";
 import { hardgifRouter } from "./routes/hardgif.route";
 import { fsiblogRouter } from "./routes/fsiblog.route";
+import { masa49Router } from "./routes/masa49.route";
 // middlewares
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ limit: "20kb" }));
@@ -24,6 +25,7 @@ app.use(morgan("dev"));
 
 app.use(hardgifRouter);
 app.use(fsiblogRouter);
+app.use(masa49Router);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.get("/", (req: Request, res: Response, next: NextFunction) => {
   const data = {

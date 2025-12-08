@@ -66,9 +66,9 @@ class BrowserManager {
 export class MyDesi extends BaseSource {
     override baseUrl = "https://mydesi.click";
     override headers = {
-        "User-Agent": getAgentRandomRotation(),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://mydesi.click/",
     };
 
@@ -98,9 +98,8 @@ export class MyDesi extends BaseSource {
             // Increase timeout slightly, waiting for DOM is usually enough
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-            // Wait shorter time for hydration/Cloudflare
-            // If blocked, 5s won't help much more than 2s usually
-            await sleep(2000);
+            // Wait for hydration/Cloudflare (8s to be safe)
+            await sleep(8000);
 
             const content = await page.content();
             return content;
