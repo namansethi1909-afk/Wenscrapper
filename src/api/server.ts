@@ -49,11 +49,11 @@ function getSimilarity(s1: string, s2: string) {
 }
 
 const enrichVideo = (item: any) => {
-  // Skymute format: Add URL field for direct video playback
+  // Skymute format: Use 'webview' type since URL points to webpage, not direct video
   const enriched = {
     ...item,
-    type: item.type || 'video',
-    // Skymute needs 'url' directly in the item for video playback
+    type: 'webview', // Changed from 'video' - Skymute will open in browser
+    // Skymute needs 'url' directly in the item for webview playback
     url: item.page || item.url || '',
     thumbnail: item.poster || '',
     // Keep both poster and thumbnail for compatibility
