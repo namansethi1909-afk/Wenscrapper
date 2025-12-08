@@ -39,21 +39,12 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
   throw lastError;
 }
 
-// Skymute format converter
+// MATCH WORKING API FORMAT EXACTLY - ONLY 3 FIELDS
 const toSkymuteFormat = (item: any) => {
-  // Skymute expects all these fields to be present
-  const posterUrl = item.poster || '';
-
   return {
-    id: item.id || '',
     title: item.title || 'Untitled',
-    image: posterUrl, // Skymute uses 'image' field
-    thumbnail: posterUrl,
-    poster: posterUrl,
-    url: item.page || item.url || '',
-    description: item.title || 'Video', // Use title as description
-    provider: 'masa49',
-    type: 'webview' // Open in browser since it's a webpage with embedded video
+    id: item.id || '',
+    poster: item.poster || ''
   };
 };
 
@@ -100,7 +91,6 @@ const handleStreams = async (req: any, res: any) => {
     const id = getParam(req, 'id');
     if (!id) return res.json({ url: '', quality: 'auto', qualities: [] });
 
-    // Use Masa49 scraper for streams
     const idStr = id.toString();
     const data = await withRetry(() => masa49Scraper.getStreams(idStr));
     res.json(data);
@@ -112,7 +102,6 @@ app.get('/search', handleSearch);
 app.get('/details', handleDetails);
 app.get('/streams', handleStreams);
 
-// Legacy route support
 app.get('/api/scrape', async (req: any, res: any) => {
   try {
     const query = req.query.keyword || req.query.q;
@@ -133,8 +122,8 @@ app.get("/", async (req: any, res: any) => {
         <a href="/details?id=${v.id}">Details</a>
       </div>
     `).join('');
-    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 v3-skymute)</h1>${videosHTML}</body></html>`);
-  } catch (e) { res.send(`Masa49 Scraper Online. Error fetching home: ${e}`); }
+    res.send(`<!DOCTYPE html><html><body><h1>Status: Online (Masa49 FINAL FIX)</h1>${videosHTML}</body></html>`);
+  } catch (e) { res.send(`Masa49 Scraper Online. Error: ${e}`); }
 });
 
 
