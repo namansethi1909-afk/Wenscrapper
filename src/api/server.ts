@@ -1,15 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-// import { Masa49 } from '../scrapper/masa49.scrapper';
-// import { MyDesi } from '../scrapper/mydesi.scrapper';
-import { ThisVid } from '../scrapper/thisvid.scrapper';
+// import { ThisVid } from '../scrapper/thisvid.scrapper';
+import { AnySex } from '../scrapper/anysex.scrapper';
 // withRetry is defined locally below 
 
-// Initialize Scraper (Switching to ThisVid for lightweight/reliable Cheerio support)
-// const masa49Scraper = new Masa49();
-// const activeScraper = new MyDesi();
-const activeScraper = new ThisVid();
+// Initialize Scraper (Switching to AnySex - validated as accessible/static)
+// const activeScraper = new ThisVid(); 
+const activeScraper = new AnySex();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
