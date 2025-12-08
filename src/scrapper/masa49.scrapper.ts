@@ -165,7 +165,7 @@ export class Masa49 extends BaseSource {
         const poster = $('.entry-content img').first().attr('src') || '';
 
         const tags: string[] = [];
-        $('a[rel="tag"]').each((_: any, el: any) => tags.push($(el).text().trim()));
+        $('a[rel="tag"]').each((_: any, el: any) => { tags.push($(el).text().trim()); });
 
         const suggestedVideo = this.parseIndex(html).slice(0, 10);
 
