@@ -128,12 +128,13 @@ app.get('/api/scrape', async (req: any, res: any) => {
   } catch (e) { res.json({ success: false, data: [] }); }
 });
 
-app.get("/", async (req: any, res: any) => {
+app.get('/', async (req, res) => {
   try {
-    const data = await withRetry(() => activeScraper.getHome());
-    res.json(formatResponse(data)); // Return JSON array directly
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch videos' });
+    const videos = await activeScraper.getHome();
+    res.json(videos);
+  } catch (e: any) {
+    console.error('Home Error:', e.message);
+    res.status(500).json({ error: e.message, stack: e.stack });
   }
 });
 
