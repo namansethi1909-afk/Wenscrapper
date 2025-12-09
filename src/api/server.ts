@@ -103,6 +103,10 @@ const handleDetails = async (req: any, res: any) => {
   } catch (error) { res.status(500).json({}); }
 };
 
+import { proxyVideo } from '../controllers/proxy.controller';
+
+app.get('/proxy', proxyVideo);
+
 const handleStreams = async (req: any, res: any) => {
   try {
     const id = getParam(req, 'id');
@@ -110,6 +114,12 @@ const handleStreams = async (req: any, res: any) => {
 
     const idStr = id.toString();
     const data = await withRetry(() => activeScraper.getStreams(idStr));
+
+    // Wrap endpoint in proxy if it exists
+    if (data.url && data.url.startsWith('http')) {
+      data.url = `https://wenscrapper.onrender.com/proxy?url=${encodeURIComponent(data.url)}`;
+    }
+
     res.json(data);
   } catch (error) { res.json({ url: '', quality: 'auto', qualities: [] }); }
 };
