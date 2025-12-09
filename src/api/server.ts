@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-// import { AnySex } from '../scrapper/anysex.scrapper';
-import { Eporner } from '../scrapper/eporner.scrapper';
+// import { Eporner } from '../scrapper/eporner.scrapper';
+import { XNXX } from '../scrapper/xnxx.scrapper';
 // withRetry is defined locally below 
 
-// Initialize Scraper (Switching to Eporner API for reliability)
-// const activeScraper = new AnySex();
-const activeScraper = new Eporner();
+// Initialize Scraper (Switching to XNXX for direct MP4 extraction - Skymute requirement)
+// const activeScraper = new Eporner();
+const activeScraper = new XNXX();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
