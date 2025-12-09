@@ -144,6 +144,8 @@ app.get('/api/scrape', async (req: any, res: any) => {
   } catch (e) { res.json({ success: false, data: [] }); }
 });
 
+app.get('/version', (req, res) => res.json({ version: 'v1.0.6-proxy-global', timestamp: new Date().toISOString() }));
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
