@@ -3,7 +3,7 @@ import cors from 'cors';
 import axios from 'axios';
 // import { Eporner } from '../scrapper/eporner.scrapper';
 import { XNXX } from '../scrapper/xnxx.scrapper';
-// withRetry is defined locally below 
+import { proxyVideo } from '../controllers/proxy.controller';
 
 // Initialize Scraper (Switching to XNXX for direct MP4 extraction - Skymute requirement)
 // const activeScraper = new Eporner();
@@ -41,6 +41,13 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 500): Pro
   throw lastError;
 }
 
+const wrapProxy = (url: string) => {
+  if (url && url.startsWith('http')) {
+    return `https://wenscrapper.onrender.com/proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 // MATCH WORKING API FORMAT + ADD VIDEO URLs
 const toSkymuteFormat = (item: any) => {
   return {
@@ -57,7 +64,8 @@ const formatResponse = async (data: any) => {
     const promises = data.map(async (item) => {
       try {
         const streams = await activeScraper.getStreams(item.id);
-        return { ...item, videoUrl: streams.url || '' };
+        const proxiedUrl = wrapProxy(streams.url || '');
+        return { ...item, videoUrl: proxiedUrl };
       } catch (e) {
         console.error(`[Server] Failed to get stream for ${item.id}:`, e);
         return { ...item, videoUrl: '' };
@@ -103,10 +111,6 @@ const handleDetails = async (req: any, res: any) => {
   } catch (error) { res.status(500).json({}); }
 };
 
-import { proxyVideo } from '../controllers/proxy.controller';
-
-app.get('/proxy', proxyVideo);
-
 const handleStreams = async (req: any, res: any) => {
   try {
     const id = getParam(req, 'id');
@@ -116,18 +120,20 @@ const handleStreams = async (req: any, res: any) => {
     const data = await withRetry(() => activeScraper.getStreams(idStr));
 
     // Wrap endpoint in proxy if it exists
-    if (data.url && data.url.startsWith('http')) {
-      data.url = `https://wenscrapper.onrender.com/proxy?url=${encodeURIComponent(data.url)}`;
-    }
+    data.url = wrapProxy(data.url || '');
 
     res.json(data);
   } catch (error) { res.json({ url: '', quality: 'auto', qualities: [] }); }
 };
 
+app.get('/proxy', proxyVideo);
 app.get('/trending', handleTrending);
 app.get('/search', handleSearch);
 app.get('/details', handleDetails);
 app.get('/streams', handleStreams);
+
+// Default to Trending for Root
+app.get('/', handleTrending);
 
 app.get('/api/scrape', async (req: any, res: any) => {
   try {
@@ -137,17 +143,6 @@ app.get('/api/scrape', async (req: any, res: any) => {
     res.json({ success: true, data: formatResponse(data), source: 'masa49', timestamp: new Date().toISOString() });
   } catch (e) { res.json({ success: false, data: [] }); }
 });
-
-app.get('/', async (req, res) => {
-  try {
-    const videos = await activeScraper.getHome();
-    res.json(videos);
-  } catch (e: any) {
-    console.error('Home Error:', e.message);
-    res.status(500).json({ error: e.message, stack: e.stack });
-  }
-});
-
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
