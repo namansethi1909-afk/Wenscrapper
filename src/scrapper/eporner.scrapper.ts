@@ -22,8 +22,6 @@ export class Eporner extends BaseSource {
     }
 
     private format(item: any): Search {
-        // Search interface only has id, title, poster
-        // The URL/page is not stored in Search object according to types/stream.d.ts
         return {
             id: item.id,
             title: item.title,
@@ -32,7 +30,6 @@ export class Eporner extends BaseSource {
     }
 
     override async getHome(page?: string): Promise<Home[]> {
-        // Eporner specific home query
         const url = `https://www.eporner.com/api/v2/video/search/?query=teen&per_page=30&page=${page || 1}&thumbsize=medium&order=top-weekly`;
         const data = await this.fetch(url);
         if (data && data.videos) {
@@ -56,7 +53,6 @@ export class Eporner extends BaseSource {
     }
 
     override async getDetails(id: string): Promise<Details> {
-        // API for details: /api/v2/video/id/
         const url = `https://www.eporner.com/api/v2/video/id/?id=${id}`;
         const data = await this.fetch(url);
 
@@ -103,16 +99,29 @@ export class Eporner extends BaseSource {
 
             console.log(`[Eporner] Stream found: ${videoUrl ? 'YES' : 'NO'}`);
 
+            // Fallback to Embed URL if no MP4 found
+            if (!videoUrl) {
+                console.log('[Eporner] Falling back to Embed URL');
+                videoUrl = `https://www.eporner.com/embed/${id}/`;
+            }
+
             return {
                 url: videoUrl,
                 quality: 'auto',
                 title: id,
-                qualities: [], // assuming empty array matches qualties[] type
+                qualities: [],
                 subtitles: []
             };
         } catch (e) {
             console.error('[Eporner] Stream fetch error:', e);
-            return { url: '', quality: 'auto', title: id, qualities: [] };
+
+            // Even on error, return Embed URL as fallback if ID exists
+            return {
+                url: `https://www.eporner.com/embed/${id}/`,
+                quality: 'auto',
+                title: id,
+                qualities: []
+            };
         }
     }
 }
